@@ -1,35 +1,53 @@
-$(function () {
-    // カレンダー
-    $(function () {
-        $('input[name="date"]').datepicker({
-            dateFormat: 'yy/mm/dd',
-        });
-    });
+$(document).ready(function () {
+    // liffId: LIFF URL "https://liff.line.me/xxx"のxxxに該当する箇所
+    // LINE DevelopersのLIFF画面より確認可能
+    var liffId = "1654150367-Agq5Vdp1";
+    initializeLiff(liffId);
+})
 
-    // 参加人数分の氏名欄を生成
-    $('#form-number').click(function () {
-        $('#form-name').empty();
-        var num = $('input[name="number"]:checked').val();
-        for (i = 0; i < num; i++) {
-            $('#form-name').append(
-                `<input class="form-control w-100 mt-1" name="name" maxlength="10">`
-            );
-        }
-    });
-
-    // 送信
-    $('form').submit(function () {
-        var date = $('input[name="date"]').val();
-        var number = $('input[name="number"]:checked').val();
-        var names = '';
-        $('#form-name').children().each(function (i, elm) {
-            names += $(elm).val() + '、';
+function initializeLiff(liffId) {
+    liff
+        .init({
+            liffId: liffId
         })
-        names = names.slice(0, -1);
+        .then(() => {
+            // Webブラウザからアクセスされた場合は、LINEにログインする
+            if (!liff.isInClient() && !liff.isLoggedIn()) {
+                window.alert("LINEアカウントにログインしてください。");
+                liff.login({redirectUri: location.href});
+            }
+        })
+        .catch((err) => {
+            console.log('LIFF Initialization failed ', err);
+        });
+}
 
-        var msg = `希望日：${date}\n人数：${number}\n氏名：${names}`;
-        sendText(msg);
+function sendText(text) {
+    if (!liff.isInClient()) {
+        shareTargetPicker(text);
+    } else {
+        sendMessages(text);
+    }
+}
 
-        return false;
+// LINEトーク画面上でメッセージ送信
+function sendMessages(text) {
+    liff.sendMessages([{
+        'type': 'text',
+        'text': text
+    }]).then(function () {
+        liff.closeWindow();
+    }).catch(function (error) {
+        window.alert('Failed to send message ' + error);
     });
-});
+}
+
+// Webブラウザからメッセージ送信
+function shareTargetPicker(text) {
+    liff.shareTargetPicker([{
+        'type': 'text',
+        'text': text
+    }]).catch(function (error) {
+        window.alert('Failed to send message ' + error);
+    });
+}
